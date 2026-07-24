@@ -72,6 +72,26 @@ class TransactionService:
 
         return account
     
+    @staticmethod
+    def _lock_accounts(sender, receiver):
+
+        account_ids = sorted([
+            sender.id,
+            receiver.id,
+        ])
+
+        accounts = (
+            Account.objects
+            .select_for_update()
+            .filter(id__in=account_ids)
+            .order_by("id")
+        )
+
+        return {
+            account.id: account
+            for account in accounts
+        }
+        
 
 
 
