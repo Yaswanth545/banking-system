@@ -28,3 +28,12 @@ class DuplicateAccountException(BusinessException):
 
 class ReceiverAccountInactiveException(BusinessException):
     default_message = "Receiver account is not active."
+
+
+class SelfBeneficiaryException(BusinessException):
+    default_message = (
+        "You cannot add your own account as a beneficiary."
+    )
+
+class BeneficiaryAlreadyExistsException(BusinessException):
+    default_message = "Beneficiary already exists."

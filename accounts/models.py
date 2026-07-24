@@ -73,3 +73,40 @@ class AccountNumberSequence(models.Model):
 
     def __str__(self):
         return str(self.last_number)
+    
+
+class Beneficiary(models.Model):
+    """
+    Saved beneficiary for quick money transfers.
+    """
+
+    owner = models.ForeignKey(
+        "users.CustomUser",
+        on_delete=models.CASCADE,
+        related_name="beneficiaries",
+    )
+
+    account = models.ForeignKey(
+        Account,
+        on_delete=models.CASCADE,
+        related_name="beneficiary_accounts",
+    )
+
+    nickname = models.CharField(
+        max_length=100,
+    )
+
+    created_at = models.DateTimeField(
+        auto_now_add=True,
+    )
+
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(
+                fields=["owner", "account"],
+                name="unique_owner_beneficiary",
+            )
+        ]
+
+    def __str__(self):
+        return f"{self.owner.email} -> {self.nickname}"

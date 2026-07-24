@@ -5,8 +5,8 @@ from rest_framework.views import APIView
 
 from common.responses import ApiResponse
 
-from .serializers import CreateAccountSerializer,AccountSerializer
-from .services import AccountService
+from .serializers import CreateAccountSerializer,AccountSerializer,BeneficiarySerializer
+from .services import AccountService,BeneficiaryService
 
 
 class CreateAccountAPIView(APIView):
@@ -56,4 +56,32 @@ class MyAccountAPIView(APIView):
         return ApiResponse.success(
             message="Account fetched successfully.",
             data=serializer.data,
+        )
+    
+
+
+class BeneficiaryCreateAPIView(APIView):
+    """
+    Add a beneficiary for the authenticated user.
+    """
+
+    permission_classes = [permissions.IsAuthenticated]
+
+    def post(self, request):
+        serializer = BeneficiarySerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+
+        beneficiary = BeneficiaryService.add_beneficiary(
+            owner=request.user,
+            account_number=serializer.validated_data["account_number"],
+            nickname=serializer.validated_data["nickname"],
+        )
+
+        return ApiResponse.success(
+            message="Beneficiary added successfully.",
+            data={
+                "id": beneficiary.id,
+                "nickname": beneficiary.nickname,
+            },
+            status_code=status.HTTP_201_CREATED,
         )

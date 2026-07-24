@@ -1,6 +1,6 @@
 from rest_framework import serializers
 
-from .models import Account
+from .models import Account,Beneficiary
 
 
 class CreateAccountSerializer(serializers.Serializer):
@@ -21,3 +21,24 @@ class AccountSerializer(serializers.ModelSerializer):
             "status",
             "created_at",
         )
+
+
+class BeneficiarySerializer(serializers.ModelSerializer):
+    account_number = serializers.CharField(write_only=True)
+
+    class Meta:
+        model = Beneficiary
+        fields = (
+            "account_number",
+            "nickname",
+        )
+
+    def validate_account_number(self, value):
+        try:
+            Account.objects.get(account_number=value)
+        except Account.DoesNotExist:
+            raise serializers.ValidationError(
+                "Account does not exist."
+            )
+
+        return value

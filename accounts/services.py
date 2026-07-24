@@ -1,10 +1,10 @@
 from django.db import transaction
 from django.core.exceptions import ValidationError
 
-from .models import Account
+from .models import Account,Beneficiary
 from .utils import generate_account_number
 from django.shortcuts import get_object_or_404
-
+from common.business_exceptions import SelfBeneficiaryException,BeneficiaryAlreadyExistsException
 
 
 
@@ -34,3 +34,32 @@ class AccountService:
             user=user
         )
 
+
+from django.shortcuts import get_object_or_404
+
+from .models import Account, Beneficiary
+
+
+class BeneficiaryService:
+
+    @staticmethod
+    def add_beneficiary(owner, account_number, nickname):
+        account = get_object_or_404(
+            Account,
+            account_number=account_number,
+        )
+
+        if Beneficiary.objects.filter(
+            owner=owner,
+            account=account,
+        ).exists():
+            raise BeneficiaryAlreadyExistsException()
+
+        if account.user == owner:
+            raise SelfBeneficiaryException()
+
+        return Beneficiary.objects.create(
+            owner=owner,
+            account=account,
+            nickname=nickname,
+        )
