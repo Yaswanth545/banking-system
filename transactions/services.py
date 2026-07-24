@@ -5,10 +5,11 @@ from django.shortcuts import get_object_or_404
 from common.business_exceptions import (
     InsufficientBalanceException,
     AccountFrozenException,
+    BusinessException,
 )
 
 from accounts.models import Account
-from .models import Transaction
+from .models import Transaction,Transfer
 
 
 class TransactionService:
@@ -20,11 +21,7 @@ class TransactionService:
         Deposit money into the authenticated user's account.
         """
 
-        account = (
-            Account.objects
-            .select_for_update()
-            .get(user=user)
-        )
+        account = TransactionService._get_locked_account(user)
 
         account.balance = F("balance") + amount
         account.save(update_fields=["balance"])
@@ -46,11 +43,7 @@ class TransactionService:
     @transaction.atomic
     def withdraw(user, amount):
 
-        account = (
-            Account.objects
-            .select_for_update()
-            .get(user=user)
-        )
+        account = TransactionService._get_locked_account(user)
 
         if account.status != Account.AccountStatus.ACTIVE:
             raise AccountFrozenException()
@@ -72,6 +65,20 @@ class TransactionService:
 
         return account
     
+
+    @staticmethod
+    def _get_locked_account(user):
+        """
+        Fetch and lock the authenticated user's account.
+        """
+        return (
+            Account.objects
+            .select_for_update()
+            .get(user=user)
+        )
+
+
+    
     @staticmethod
     def _lock_accounts(sender, receiver):
 
@@ -92,7 +99,26 @@ class TransactionService:
             for account in accounts
         }
         
+    @staticmethod
+    @transaction.atomic
+    def transfer(
+        sender_user,
+        receiver_account_number,
+        amount,
+    ):
+        """
+        Transfer money between two accounts.
+        """
+        sender = TransactionService._get_locked_account(sender_user)
 
+        receiver = get_object_or_404(
+            Account,
+            account_number=receiver_account_number,
+        )
 
+        if sender.id == receiver.id:
+            raise BusinessException(
+                "You cannot transfer money to your own account."
+            )
 
     
