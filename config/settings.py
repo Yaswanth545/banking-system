@@ -178,7 +178,7 @@ SIMPLE_JWT = {
 
 SPECTACULAR_SETTINGS = {
     "TITLE": "Banking System API",
-    "DESCRIPTION": "REST APIs for Banking System",
+    "DESCRIPTION": "REST API documentation for the Banking System project.",
     "VERSION": "1.0.0",
 
     "SERVE_INCLUDE_SCHEMA": False,
