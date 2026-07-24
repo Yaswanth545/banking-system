@@ -1,3 +1,12 @@
 from django.contrib import admin
+from .models import Account
+from .models import Account, AccountNumberSequence
 
-# Register your models here.
+
+admin.site.register(Account)
+
+
+
+@admin.register(AccountNumberSequence)
+class AccountNumberSequenceAdmin(admin.ModelAdmin):
+    list_display = ("id", "last_number")
