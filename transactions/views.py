@@ -7,6 +7,11 @@ from .models import Transaction
 from .serializers import DepositSerializer,WithdrawSerializer,TransferSerializer,TransactionHistorySerializer
 from .services import TransactionService
 from common.pagination import StandardResultsSetPagination
+from django_filters.rest_framework import DjangoFilterBackend
+
+from .filters import TransactionFilter
+
+
 
 
 class DepositAPIView(APIView):
@@ -89,6 +94,10 @@ class TransactionHistoryAPIView(generics.ListAPIView):
     serializer_class = TransactionHistorySerializer
     permission_classes = [permissions.IsAuthenticated]
     pagination_class = StandardResultsSetPagination
+
+    filter_backends = [DjangoFilterBackend]
+    filterset_class = TransactionFilter
+
 
     def get_queryset(self):
         return (
