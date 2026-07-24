@@ -3,6 +3,9 @@ from django.core.exceptions import ValidationError
 
 from .models import Account
 from .utils import generate_account_number
+from django.shortcuts import get_object_or_404
+
+
 
 
 class AccountService:
@@ -23,3 +26,11 @@ class AccountService:
         )
 
         return account
+    
+    @staticmethod
+    def get_account(user):
+        return get_object_or_404(
+            Account,
+            user=user
+        )
+

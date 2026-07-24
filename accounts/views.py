@@ -5,7 +5,7 @@ from rest_framework.views import APIView
 
 from common.responses import ApiResponse
 
-from .serializers import CreateAccountSerializer
+from .serializers import CreateAccountSerializer,AccountSerializer
 from .services import AccountService
 
 
@@ -40,4 +40,20 @@ class CreateAccountAPIView(APIView):
                 "status": account.status,
             },
             status_code=status.HTTP_201_CREATED,
+        )
+    
+
+class MyAccountAPIView(APIView):
+
+    permission_classes = [permissions.IsAuthenticated]
+
+    def get(self, request):
+
+        account = AccountService.get_account(request.user)
+
+        serializer = AccountSerializer(account)
+
+        return ApiResponse.success(
+            message="Account fetched successfully.",
+            data=serializer.data,
         )
