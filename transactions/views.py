@@ -145,6 +145,7 @@ class TransactionHistoryAPIView(generics.ListAPIView):
     def get_queryset(self):
         return (
             Transaction.objects
+            .select_related("account")
             .filter(account__user=self.request.user)
             .order_by("-created_at")
         )

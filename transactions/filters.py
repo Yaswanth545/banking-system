@@ -8,18 +8,28 @@ class TransactionFilter(django_filters.FilterSet):
     Filters for transaction history.
     """
 
-    created_at_after = django_filters.DateFilter(
+    start_date = django_filters.DateFilter(
         field_name="created_at",
         lookup_expr="date__gte",
     )
 
-    created_at_before = django_filters.DateFilter(
+    end_date = django_filters.DateFilter(
         field_name="created_at",
         lookup_expr="date__lte",
     )
 
+    min_amount = django_filters.NumberFilter(
+        field_name="amount",
+        lookup_expr="gte",
+    )
+
+    max_amount = django_filters.NumberFilter(
+        field_name="amount",
+        lookup_expr="lte",
+    )
+
     class Meta:
         model = Transaction
-        fields = [
+        fields = (
             "transaction_type",
-        ]
+        )
