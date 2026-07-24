@@ -7,6 +7,9 @@ from common.responses import ApiResponse
 
 from .serializers import CreateAccountSerializer,AccountSerializer,BeneficiarySerializer
 from .services import AccountService,BeneficiaryService
+from drf_spectacular.utils import (extend_schema,OpenApiExample,OpenApiResponse,)
+
+
 
 
 class CreateAccountAPIView(APIView):
@@ -43,6 +46,15 @@ class CreateAccountAPIView(APIView):
         )
     
 
+
+@extend_schema(
+    summary="Get My Account",
+    description="Retrieve the authenticated user's bank account details.",
+    responses={
+        200: OpenApiResponse(description="Account details retrieved successfully."),
+    },
+    tags=["Accounts"],
+)
 class MyAccountAPIView(APIView):
 
     permission_classes = [permissions.IsAuthenticated]
@@ -59,7 +71,16 @@ class MyAccountAPIView(APIView):
         )
     
 
-
+@extend_schema(
+    summary="Add Beneficiary",
+    description="Add a beneficiary for future money transfers.",
+    request=BeneficiarySerializer,
+    responses={
+        201: OpenApiResponse(description="Beneficiary added successfully."),
+        400: OpenApiResponse(description="Validation failed."),
+    },
+    tags=["Beneficiaries"],
+)
 class BeneficiaryCreateAPIView(APIView):
     """
     Add a beneficiary for the authenticated user.

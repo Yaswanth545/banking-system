@@ -9,7 +9,21 @@ from common.responses import ApiResponse
 from .serializers import LoginSerializer
 from .serializers import RegisterSerializer
 
+from drf_spectacular.utils import (extend_schema,OpenApiExample,OpenApiResponse,)
 
+
+
+
+@extend_schema(
+    summary="Register a new customer",
+    description="Creates a new customer account in the banking system.",
+    request=RegisterSerializer,
+    responses={
+        201: OpenApiResponse(description="Registration successful."),
+        400: OpenApiResponse(description="Validation failed."),
+    },
+    tags=["Authentication"],
+)
 class RegisterAPIView(APIView):
     permission_classes = []
 
@@ -31,6 +45,19 @@ class RegisterAPIView(APIView):
             status_code=status.HTTP_201_CREATED,
         )
 
+
+
+
+@extend_schema(
+    summary="Login",
+    description="Authenticate the user and return JWT access and refresh tokens.",
+    request=LoginSerializer,
+    responses={
+        200: OpenApiResponse(description="Login successful."),
+        401: OpenApiResponse(description="Invalid credentials."),
+    },
+    tags=["Authentication"],
+)
 class LoginAPIView(APIView):
 
     permission_classes = []

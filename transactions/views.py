@@ -10,10 +10,20 @@ from common.pagination import StandardResultsSetPagination
 from django_filters.rest_framework import DjangoFilterBackend
 
 from .filters import TransactionFilter
+from drf_spectacular.utils import (extend_schema,OpenApiExample,OpenApiResponse,)
 
 
 
-
+@extend_schema(
+    summary="Deposit Money",
+    description="Deposit money into the authenticated user's account.",
+    request=DepositSerializer,
+    responses={
+        200: OpenApiResponse(description="Deposit completed successfully."),
+        400: OpenApiResponse(description="Validation failed."),
+    },
+    tags=["Transactions"],
+)
 class DepositAPIView(APIView):
 
     permission_classes = [permissions.IsAuthenticated]
@@ -37,6 +47,19 @@ class DepositAPIView(APIView):
         )
     
 
+
+
+
+@extend_schema(
+    summary="Withdraw Money",
+    description="Withdraw money from the authenticated user's account.",
+    request=WithdrawSerializer,
+    responses={
+        200: OpenApiResponse(description="Withdrawal completed successfully."),
+        400: OpenApiResponse(description="Insufficient balance or validation failed."),
+    },
+    tags=["Transactions"],
+)
 class WithdrawAPIView(APIView):
 
     permission_classes = [permissions.IsAuthenticated]
@@ -60,6 +83,19 @@ class WithdrawAPIView(APIView):
         )
     
 
+
+
+
+@extend_schema(
+    summary="Transfer Money",
+    description="Transfer money from the authenticated user's account to another account.",
+    request=TransferSerializer,
+    responses={
+        200: OpenApiResponse(description="Transfer completed successfully."),
+        400: OpenApiResponse(description="Transfer failed."),
+    },
+    tags=["Transactions"],
+)
 class TransferAPIView(APIView):
 
     permission_classes = [permissions.IsAuthenticated]
@@ -85,7 +121,14 @@ class TransferAPIView(APIView):
             status_code=status.HTTP_200_OK,
         )
     
-
+@extend_schema(
+    summary="Transaction History",
+    description="Retrieve paginated transaction history for the authenticated user.",
+    responses={
+        200: OpenApiResponse(description="Transaction history retrieved successfully."),
+    },
+    tags=["Transactions"],
+)
 class TransactionHistoryAPIView(generics.ListAPIView):
     """
     Retrieve transaction history for the authenticated user.
