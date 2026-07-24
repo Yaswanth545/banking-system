@@ -3,7 +3,7 @@ from rest_framework.views import APIView
 
 from common.responses import ApiResponse
 
-from .serializers import DepositSerializer
+from .serializers import DepositSerializer,WithdrawSerializer
 from .services import TransactionService
 
 
@@ -23,6 +23,29 @@ class DepositAPIView(APIView):
 
         return ApiResponse.success(
             message="Amount deposited successfully.",
+            data={
+                "balance": str(account.balance),
+            },
+            status_code=status.HTTP_200_OK,
+        )
+    
+
+class WithdrawAPIView(APIView):
+
+    permission_classes = [permissions.IsAuthenticated]
+
+    def post(self, request):
+
+        serializer = WithdrawSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+
+        account = TransactionService.withdraw(
+            user=request.user,
+            amount=serializer.validated_data["amount"],
+        )
+
+        return ApiResponse.success(
+            message="Amount withdrawn successfully.",
             data={
                 "balance": str(account.balance),
             },

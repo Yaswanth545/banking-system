@@ -1,6 +1,9 @@
 from rest_framework import status
 from rest_framework.response import Response
 from rest_framework.views import exception_handler
+from .business_exceptions import BusinessException
+
+
 
 
 def custom_exception_handler(exc, context):
@@ -9,6 +12,16 @@ def custom_exception_handler(exc, context):
     """
 
     response = exception_handler(exc, context)
+
+    if isinstance(exc, BusinessException):
+        return Response(
+            {
+                "success": False,
+                "message": exc.message,
+            },
+            status=status.HTTP_400_BAD_REQUEST,
+        )
+
 
     if response is None:
         return Response(
@@ -27,3 +40,4 @@ def custom_exception_handler(exc, context):
         },
         status=response.status_code,
     )
+
