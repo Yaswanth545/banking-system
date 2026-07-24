@@ -1,0 +1,36 @@
+from django.db import transaction
+from django.db.models import F
+from django.shortcuts import get_object_or_404
+
+from accounts.models import Account
+from .models import Transaction
+
+
+class TransactionService:
+
+    @staticmethod
+    @transaction.atomic
+    def deposit(user, amount):
+        """
+        Deposit money into the authenticated user's account.
+        """
+
+        account = (
+            Account.objects
+            .select_for_update()
+            .get(user=user)
+        )
+
+        account.balance = F("balance") + amount
+        account.save(update_fields=["balance"])
+
+        account.refresh_from_db()
+
+        Transaction.objects.create(
+            account=account,
+            transaction_type=Transaction.TransactionType.DEPOSIT,
+            amount=amount,
+            balance_after_transaction=account.balance,
+        )
+
+        return account
