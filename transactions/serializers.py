@@ -1,6 +1,7 @@
 from decimal import Decimal
 
 from rest_framework import serializers
+from .models import Transaction
 
 
 class DepositSerializer(serializers.Serializer):
@@ -57,3 +58,16 @@ class TransferSerializer(serializers.Serializer):
             )
 
         return value
+    
+
+class TransactionHistorySerializer(serializers.ModelSerializer):
+
+    class Meta:
+        model = Transaction
+        fields = (
+            "id",
+            "transaction_type",
+            "amount",
+            "balance_after_transaction",
+            "created_at",
+        )

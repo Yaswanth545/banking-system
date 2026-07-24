@@ -1,10 +1,12 @@
-from rest_framework import permissions, status
+from rest_framework import permissions, status,generics
 from rest_framework.views import APIView
 
 from common.responses import ApiResponse
 
-from .serializers import DepositSerializer,WithdrawSerializer
+from .models import Transaction
+from .serializers import DepositSerializer,WithdrawSerializer,TransferSerializer,TransactionHistorySerializer
 from .services import TransactionService
+from common.pagination import StandardResultsSetPagination
 
 
 class DepositAPIView(APIView):
@@ -50,4 +52,47 @@ class WithdrawAPIView(APIView):
                 "balance": str(account.balance),
             },
             status_code=status.HTTP_200_OK,
+        )
+    
+
+class TransferAPIView(APIView):
+
+    permission_classes = [permissions.IsAuthenticated]
+
+    def post(self, request):
+
+        serializer = TransferSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+
+        transfer = TransactionService.transfer(
+            sender_user=request.user,
+            receiver_account_number=serializer.validated_data[
+                "receiver_account_number"
+            ],
+            amount=serializer.validated_data["amount"],
+        )
+
+        return ApiResponse.success(
+            message="Money transferred successfully.",
+            data={
+                "reference_number": str(transfer.reference_number),
+            },
+            status_code=status.HTTP_200_OK,
+        )
+    
+
+class TransactionHistoryAPIView(generics.ListAPIView):
+    """
+    Retrieve transaction history for the authenticated user.
+    """
+
+    serializer_class = TransactionHistorySerializer
+    permission_classes = [permissions.IsAuthenticated]
+    pagination_class = StandardResultsSetPagination
+
+    def get_queryset(self):
+        return (
+            Transaction.objects
+            .filter(account__user=self.request.user)
+            .order_by("-created_at")
         )

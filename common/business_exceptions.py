@@ -24,3 +24,7 @@ class AccountNotFoundException(BusinessException):
 
 class DuplicateAccountException(BusinessException):
     default_message = "User already has a bank account."
+
+
+class ReceiverAccountInactiveException(BusinessException):
+    default_message = "Receiver account is not active."

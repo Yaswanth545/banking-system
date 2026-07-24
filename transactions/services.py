@@ -6,6 +6,7 @@ from common.business_exceptions import (
     InsufficientBalanceException,
     AccountFrozenException,
     BusinessException,
+    ReceiverAccountInactiveException
 )
 
 from accounts.models import Account
@@ -81,23 +82,31 @@ class TransactionService:
     
     @staticmethod
     def _lock_accounts(sender, receiver):
+        """
+        Lock sender and receiver accounts in ascending ID order
+        to prevent deadlocks.
+        """
 
-        account_ids = sorted([
-            sender.id,
-            receiver.id,
-        ])
+        account_ids = sorted([sender.id, receiver.id])
 
-        accounts = (
+        locked_accounts = (
             Account.objects
             .select_for_update()
             .filter(id__in=account_ids)
             .order_by("id")
         )
 
-        return {
+        account_map = {
             account.id: account
-            for account in accounts
+            for account in locked_accounts
         }
+
+        return (
+            account_map[sender.id],
+            account_map[receiver.id],
+        )
+    
+
         
     @staticmethod
     @transaction.atomic
@@ -107,9 +116,14 @@ class TransactionService:
         amount,
     ):
         """
-        Transfer money between two accounts.
+        Transfer funds from the authenticated user's account
+        to another active account in a single atomic transaction.
         """
-        sender = TransactionService._get_locked_account(sender_user)
+
+        sender = get_object_or_404(
+            Account,
+            user=sender_user,
+        )
 
         receiver = get_object_or_404(
             Account,
@@ -121,4 +135,46 @@ class TransactionService:
                 "You cannot transfer money to your own account."
             )
 
-    
+        sender, receiver = TransactionService._lock_accounts(
+            sender,
+            receiver,
+        )
+
+        if sender.status != Account.AccountStatus.ACTIVE:
+            raise AccountFrozenException()
+
+        if receiver.status != Account.AccountStatus.ACTIVE:
+            raise ReceiverAccountInactiveException()
+        
+        if sender.balance < amount:
+            raise InsufficientBalanceException()
+        
+        sender.balance = F("balance") - amount
+        sender.save(update_fields=["balance"])
+
+        receiver.balance = F("balance") + amount
+        receiver.save(update_fields=["balance"])
+
+        sender.refresh_from_db()
+        receiver.refresh_from_db()
+
+        transfer = Transfer.objects.create(
+            sender_account=sender,
+            receiver_account=receiver,
+            amount=amount,
+            )
+
+        Transaction.objects.create(
+            account=sender,
+            transaction_type=Transaction.TransactionType.DEBIT,
+            amount=amount,
+            balance_after_transaction=sender.balance,
+            )
+
+        Transaction.objects.create(
+        account=receiver,
+        transaction_type=Transaction.TransactionType.CREDIT,
+        amount=amount,
+        balance_after_transaction=receiver.balance,)
+                        
+        return transfer
