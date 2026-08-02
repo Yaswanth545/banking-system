@@ -1,5 +1,7 @@
 from rest_framework import permissions, status,generics
 from rest_framework.views import APIView
+from rest_framework.response import Response
+
 
 from common.responses import ApiResponse
 
@@ -14,7 +16,7 @@ from drf_spectacular.utils import (extend_schema,OpenApiExample,OpenApiResponse,
 
 from django.http import HttpResponse,FileResponse
 from .statement_service import StatementService
-
+from .cache_service import CacheService
 
 
 
@@ -155,6 +157,24 @@ class TransactionHistoryAPIView(generics.ListAPIView):
             .order_by("-created_at")
         )
     
+    def list(self, request, *args, **kwargs):
+        cached_response = CacheService.get_transaction_history(
+            request.user.id
+        )
+
+        if cached_response:
+            return Response(cached_response)
+        
+        response = super().list(
+            request,
+            *args,
+            **kwargs,
+        )
+
+
+        CacheService.set_transaction_history(request.user.id,response.data,)
+
+        return response
 
 
 class StatementPDFAPIView(APIView):

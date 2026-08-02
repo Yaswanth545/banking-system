@@ -11,7 +11,7 @@ from common.business_exceptions import (
 
 from accounts.models import Account
 from .models import Transaction,Transfer
-
+from .cache_service import CacheService
 import logging
 
 logger = logging.getLogger(__name__)
@@ -61,6 +61,10 @@ class TransactionService:
             account.balance,
         )
 
+        CacheService.clear_transaction_history(
+            user.id
+        )
+
         return account
     
     
@@ -106,6 +110,10 @@ class TransactionService:
             user.email,
             amount,
             account.balance,
+        )
+
+        CacheService.clear_transaction_history(
+            user.id
         )
 
         return account
@@ -232,5 +240,13 @@ class TransactionService:
             receiver.account_number,
             amount,
         ) 
+
+        CacheService.clear_transaction_history(
+            sender.user.id
+        )
+
+        CacheService.clear_transaction_history(
+            receiver.user.id
+        )
 
         return transfer
