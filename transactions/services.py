@@ -12,6 +12,19 @@ from common.business_exceptions import (
 from accounts.models import Account
 from .models import Transaction,Transfer
 
+import logging
+
+logger = logging.getLogger(__name__)
+
+
+
+
+
+
+
+
+
+
 
 class TransactionService:
 
@@ -21,6 +34,11 @@ class TransactionService:
         """
         Deposit money into the authenticated user's account.
         """
+
+        logger.info(
+            "Deposit initiated by %s",
+            user.email,
+        )
 
         account = TransactionService._get_locked_account(user)
 
@@ -36,6 +54,13 @@ class TransactionService:
             balance_after_transaction=account.balance,
         )
 
+        logger.info(
+            "Deposit successful. User=%s Amount=%s Balance=%s",
+            user.email,
+            amount,
+            account.balance,
+        )
+
         return account
     
     
@@ -44,12 +69,24 @@ class TransactionService:
     @transaction.atomic
     def withdraw(user, amount):
 
+        logger.info(
+            "Withdrawal initiated by %s",
+            user.email,
+        )
+
         account = TransactionService._get_locked_account(user)
 
         if account.status != Account.AccountStatus.ACTIVE:
+            
             raise AccountFrozenException()
 
         if account.balance < amount:
+            logger.info(
+                "Withdrawal successful. User=%s Amount=%s Balance=%s",
+                user.email,
+                amount,
+                account.balance,
+            )
             raise InsufficientBalanceException()
 
         account.balance = F("balance") - amount
@@ -62,6 +99,13 @@ class TransactionService:
             transaction_type=Transaction.TransactionType.WITHDRAW,
             amount=amount,
             balance_after_transaction=account.balance,
+        )
+
+        logger.info(
+            "Withdrawal successful. User=%s Amount=%s Balance=%s",
+            user.email,
+            amount,
+            account.balance,
         )
 
         return account
@@ -120,6 +164,11 @@ class TransactionService:
         to another active account in a single atomic transaction.
         """
 
+        logger.info(
+            "Transfer initiated by %s",
+            sender_user.email,
+        )
+
         sender = get_object_or_404(
             Account,
             user=sender_user,
@@ -176,5 +225,12 @@ class TransactionService:
         transaction_type=Transaction.TransactionType.CREDIT,
         amount=amount,
         balance_after_transaction=receiver.balance,)
-                        
+
+        logger.info(
+            "Transfer successful. Sender=%s Receiver=%s Amount=%s",
+            sender.account_number,
+            receiver.account_number,
+            amount,
+        ) 
+
         return transfer
