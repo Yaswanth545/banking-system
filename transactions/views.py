@@ -4,13 +4,18 @@ from rest_framework.views import APIView
 from common.responses import ApiResponse
 
 from .models import Transaction
-from .serializers import DepositSerializer,WithdrawSerializer,TransferSerializer,TransactionHistorySerializer
+from .serializers import DepositSerializer,WithdrawSerializer,TransferSerializer,TransactionHistorySerializer,StatementSerializer
 from .services import TransactionService
 from common.pagination import StandardResultsSetPagination
 from django_filters.rest_framework import DjangoFilterBackend
 
 from .filters import TransactionFilter
 from drf_spectacular.utils import (extend_schema,OpenApiExample,OpenApiResponse,)
+
+from django.http import HttpResponse,FileResponse
+from .statement_service import StatementService
+
+
 
 
 
@@ -149,3 +154,65 @@ class TransactionHistoryAPIView(generics.ListAPIView):
             .filter(account__user=self.request.user)
             .order_by("-created_at")
         )
+    
+
+
+class StatementPDFAPIView(APIView):
+
+    permission_classes = [permissions.IsAuthenticated]
+
+    def get(self, request):
+
+        serializer = StatementSerializer(
+            data=request.query_params
+        )
+
+        serializer.is_valid(
+            raise_exception=True
+        )
+
+        pdf = StatementService.generate_pdf(
+            user=request.user,
+            start_date=serializer.validated_data.get("start_date"),
+            end_date=serializer.validated_data.get("end_date"),
+        )
+
+        return FileResponse(
+            pdf,
+            as_attachment=True,
+            filename="account_statement.pdf",
+            content_type="application/pdf",
+        )
+    
+
+
+class StatementCSVAPIView(APIView):
+
+    permission_classes = [permissions.IsAuthenticated]
+
+    def get(self, request):
+
+        serializer = StatementSerializer(
+            data=request.query_params
+        )
+
+        serializer.is_valid(
+            raise_exception=True
+        )
+
+        csv_buffer = StatementService.generate_csv(
+            user=request.user,
+            start_date=serializer.validated_data.get("start_date"),
+            end_date=serializer.validated_data.get("end_date"),
+        )
+
+        response = HttpResponse(
+            csv_buffer.getvalue(),
+            content_type="text/csv",
+        )
+
+        response["Content-Disposition"] = (
+            'attachment; filename="account_statement.csv"'
+        )
+
+        return response
