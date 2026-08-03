@@ -1,13 +1,26 @@
 from celery import shared_task
+from django.core.mail import send_mail
+from django.conf import settings
+from django.contrib.auth import get_user_model
+
+User = get_user_model()
 
 
 @shared_task
-def test_task():
+def send_welcome_email(user_id):
 
-    print("=" * 50)
+    user = User.objects.get(id = user_id)
 
-    print("Celery is working successfully!")
+    send_mail(
+        subject="Welcome to ABC Bank",
+        message=(
+            f"Hello {user.username},\n\n"
+            "Welcome to ABC Bank.\n"
+            "Your account has been created successfully."
+        ),
+        from_email=settings.DEFAULT_FROM_EMAIL,
+        recipient_list=[user.email],
+        fail_silently=False,
+    )
 
-    print("=" * 50)
-
-    return "Success"
+    return "Email Sent"

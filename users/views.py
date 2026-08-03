@@ -10,7 +10,11 @@ from .serializers import LoginSerializer
 from .serializers import RegisterSerializer
 
 from drf_spectacular.utils import (extend_schema,OpenApiExample,OpenApiResponse,)
+from transactions.tasks import send_welcome_email
 
+
+import logging
+logger = logging.getLogger(__name__)
 
 
 
@@ -28,10 +32,15 @@ class RegisterAPIView(APIView):
     permission_classes = []
 
     def post(self, request):
+        
+        logger.info("Register API called")
+
         serializer = RegisterSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
 
         user = serializer.save()
+
+        send_welcome_email.delay(user.id)
 
         return ApiResponse.success(
             message=REGISTER_SUCCESS,

@@ -14,6 +14,7 @@ from pathlib import Path
 from decouple import config
 from datetime import timedelta
 import os
+from logging.handlers import RotatingFileHandler
 
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
@@ -194,6 +195,7 @@ SIMPLE_JWT = {
 }
 
 
+
 SPECTACULAR_SETTINGS = {
     "TITLE": "Banking System API",
     "DESCRIPTION": "REST API documentation for the Banking System project.",
@@ -206,35 +208,55 @@ SPECTACULAR_SETTINGS = {
     },
 }
 
-LOG_DIR = os.path.join(BASE_DIR, "logs")
 
-os.makedirs(LOG_DIR, exist_ok=True)
+
+LOG_DIR = BASE_DIR / "logs"
+
 
 LOGGING = {
     "version": 1,
+
     "disable_existing_loggers": False,
 
     "formatters": {
         "standard": {
-            "format": "%(asctime)s | %(levelname)s | %(name)s | %(message)s",
+            "format": ("[{asctime}] " "{levelname} " "{name} " "{message}"),
+            "style": "{",
         },
     },
 
     "handlers": {
-        "file": {
-            "level": "INFO",
-            "class": "logging.FileHandler",
-            "filename": os.path.join(LOG_DIR, "banking.log"),
+
+        "console": {
+            "class": "logging.StreamHandler",
             "formatter": "standard",
+        },
+
+        "file": {
+            "class": "logging.handlers.RotatingFileHandler",
+            "filename": LOG_DIR / "application.log",
+            "maxBytes": 1024 * 1024 * 5,
+            "backupCount": 5,
+            "formatter": "standard",
+        },
+
+        "error_file": {
+            "class": "logging.handlers.RotatingFileHandler",
+            "filename": LOG_DIR / "error.log",
+            "maxBytes": 1024 * 1024 * 5,
+            "backupCount": 5,
+            "formatter": "standard",
+            "level": "ERROR",
         },
     },
 
-    "loggers": {
-        "": {
-            "handlers": ["file"],
-            "level": "INFO",
-            "propagate": True,
-        },
+    "root": {
+        "handlers": [
+            "console",
+            "file",
+            "error_file",
+        ],
+        "level": "INFO",
     },
 }
 
@@ -253,3 +275,8 @@ CELERY_TASK_SERIALIZER = "json"
 CELERY_RESULT_SERIALIZER = "json"
 
 CELERY_TIMEZONE = "Asia/Kolkata"
+
+
+EMAIL_BACKEND = "django.core.mail.backends.console.EmailBackend"
+
+DEFAULT_FROM_EMAIL = "noreply@abcbank.com"
