@@ -23,6 +23,30 @@ services:
 
     command: python manage.py runserver 0.0.0.0:8000
 
+
+
+  celery:
+    build: .
+
+    container_name: banking_celery
+
+    command: celery -A config worker --loglevel=info
+
+    volumes:
+      - .:/app
+
+    env_file:
+      - .env
+
+    environment:
+      REDIS_URL: redis://redis:6379/1
+
+    depends_on:
+      - postgres
+      - redis
+      - rabbitmq
+
+
   redis:
     image: redis:7-alpine
 
@@ -59,7 +83,7 @@ services:
   
 
   rabbitmq:
-    image: rabbitmq:4-management
+    image: rabbitmq:3.13-management
 
     container_name: banking_rabbitmq
 
