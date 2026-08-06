@@ -23,9 +23,6 @@ logger = logging.getLogger(__name__)
 
 
 
-
-
-
 class TransactionService:
 
     @staticmethod
@@ -34,13 +31,16 @@ class TransactionService:
         """
         Deposit money into the authenticated user's account.
         """
+        account = TransactionService._get_locked_account(user)
+
 
         logger.info(
-            "Deposit initiated by %s",
-            user.email,
+            "Deposit started | Account=%s Amount=%s",
+            account.account_number,
+            amount,
         )
 
-        account = TransactionService._get_locked_account(user)
+        
 
         account.balance = F("balance") + amount
         account.save(update_fields=["balance"])
@@ -55,8 +55,8 @@ class TransactionService:
         )
 
         logger.info(
-            "Deposit successful. User=%s Amount=%s Balance=%s",
-            user.email,
+            "Deposit successful | Account=%s Amount=%s NewBalance=%s",
+            account.account_number,
             amount,
             account.balance,
         )
@@ -73,21 +73,22 @@ class TransactionService:
     @transaction.atomic
     def withdraw(user, amount):
 
-        logger.info(
-            "Withdrawal initiated by %s",
-            user.email,
-        )
-
         account = TransactionService._get_locked_account(user)
+
+        logger.info(
+            "Withdrawal requested | Account=%s Amount=%s",
+            account.account_number,
+            amount,
+        )
 
         if account.status != Account.AccountStatus.ACTIVE:
             
             raise AccountFrozenException()
 
         if account.balance < amount:
-            logger.info(
-                "Withdrawal successful. User=%s Amount=%s Balance=%s",
-                user.email,
+            logger.warning(
+                "Insufficient balance | Account=%s Requested=%s Balance=%s",
+                account.account_number,
                 amount,
                 account.balance,
             )
@@ -106,8 +107,8 @@ class TransactionService:
         )
 
         logger.info(
-            "Withdrawal successful. User=%s Amount=%s Balance=%s",
-            user.email,
+            "Withdrawal successful | Account=%s Amount=%s Balance=%s",
+            account.account_number,
             amount,
             account.balance,
         )
@@ -171,82 +172,124 @@ class TransactionService:
         Transfer funds from the authenticated user's account
         to another active account in a single atomic transaction.
         """
+        try:
 
-        logger.info(
-            "Transfer initiated by %s",
-            sender_user.email,
-        )
-
-        sender = get_object_or_404(
-            Account,
-            user=sender_user,
-        )
-
-        receiver = get_object_or_404(
-            Account,
-            account_number=receiver_account_number,
-        )
-
-        if sender.id == receiver.id:
-            raise BusinessException(
-                "You cannot transfer money to your own account."
+            sender = get_object_or_404(
+                Account,
+                user=sender_user,
             )
 
-        sender, receiver = TransactionService._lock_accounts(
-            sender,
-            receiver,
-        )
+            receiver = get_object_or_404(
+                Account,
+                account_number=receiver_account_number,
+            )
 
-        if sender.status != Account.AccountStatus.ACTIVE:
-            raise AccountFrozenException()
+            logger.info(
+                "Transfer initiated | From=%s To=%s Amount=%s",
+                sender.account_number,
+                receiver.account_number,
+                amount,
+            )
 
-        if receiver.status != Account.AccountStatus.ACTIVE:
-            raise ReceiverAccountInactiveException()
-        
-        if sender.balance < amount:
-            raise InsufficientBalanceException()
-        
-        sender.balance = F("balance") - amount
-        sender.save(update_fields=["balance"])
+            if sender.id == receiver.id:
 
-        receiver.balance = F("balance") + amount
-        receiver.save(update_fields=["balance"])
+                logger.warning(
+                    "Self-transfer attempted | Account=%s",
+                    sender.account_number,
+                )
 
-        sender.refresh_from_db()
-        receiver.refresh_from_db()
+                raise BusinessException(
+                    "You cannot transfer money to your own account."
+                )
 
-        transfer = Transfer.objects.create(
-            sender_account=sender,
-            receiver_account=receiver,
+            sender, receiver = TransactionService._lock_accounts(
+                sender,
+                receiver,
+            )
+
+            if sender.status != Account.AccountStatus.ACTIVE:
+
+                logger.warning(
+                    "Transfer blocked | Sender account frozen=%s",
+                    sender.account_number,
+                )
+                
+                raise AccountFrozenException()
+
+            if receiver.status != Account.AccountStatus.ACTIVE:
+                logger.warning(
+                    "Transfer blocked | Receiver inactive=%s",
+                    receiver.account_number,
+                )
+                raise ReceiverAccountInactiveException()
+            
+            if sender.balance < amount:
+                logger.warning(
+                    "Transfer failed due to insufficient balance | Sender=%s Requested=%s Available=%s",
+                    sender.account_number,
+                    amount,
+                    sender.balance,
+                )
+                raise InsufficientBalanceException()
+
+            logger.info(
+                "Updating account balances | Sender=%s Receiver=%s",
+                sender.account_number,
+                receiver.account_number,
+            )
+            
+            sender.balance = F("balance") - amount
+            sender.save(update_fields=["balance"])
+
+            receiver.balance = F("balance") + amount
+            receiver.save(update_fields=["balance"])
+
+            sender.refresh_from_db()
+            receiver.refresh_from_db()
+
+            transfer = Transfer.objects.create(
+                sender_account=sender,
+                receiver_account=receiver,
+                amount=amount,
+                )
+
+            logger.info(
+                "Transfer record created | Reference=%s",
+                transfer.reference_number,
+            )
+
+            Transaction.objects.create(
+                account=sender,
+                transaction_type=Transaction.TransactionType.DEBIT,
+                amount=amount,
+                balance_after_transaction=sender.balance,
+                )
+
+            Transaction.objects.create(
+            account=receiver,
+            transaction_type=Transaction.TransactionType.CREDIT,
             amount=amount,
+            balance_after_transaction=receiver.balance,)
+
+            logger.info(
+                "Transfer completed successfully | Ref=%s Amount=%s",
+                transfer.reference_number,
+                amount,
             )
 
-        Transaction.objects.create(
-            account=sender,
-            transaction_type=Transaction.TransactionType.DEBIT,
-            amount=amount,
-            balance_after_transaction=sender.balance,
+            CacheService.clear_transaction_history(
+                sender.user.id
             )
 
-        Transaction.objects.create(
-        account=receiver,
-        transaction_type=Transaction.TransactionType.CREDIT,
-        amount=amount,
-        balance_after_transaction=receiver.balance,)
+            CacheService.clear_transaction_history(
+                receiver.user.id
+            )
 
-        logger.info(
-            "Transfer successful. Sender=%s Receiver=%s Amount=%s",
-            sender.account_number,
-            receiver.account_number,
-            amount,
-        ) 
+            return transfer
 
-        CacheService.clear_transaction_history(
-            sender.user.id
-        )
+        except Exception:
+            logger.exception(
+                "unexcepted error during transfer"
+            )
 
-        CacheService.clear_transaction_history(
-            receiver.user.id
-        )
-
-        return transfer
+            raise

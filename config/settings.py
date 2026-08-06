@@ -56,6 +56,7 @@ INSTALLED_APPS = [
 
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
+    'common.middleware.RequestIDMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
@@ -178,7 +179,8 @@ REST_FRAMEWORK = {
 
     "DEFAULT_FILTER_BACKENDS": [
     "django_filters.rest_framework.DjangoFilterBackend",
-]
+    ],
+    "EXCEPTION_HANDLER": "common.exception_handler.custom_exception_handler",
 }
 
 SIMPLE_JWT = {
@@ -220,8 +222,14 @@ LOGGING = {
 
     "formatters": {
         "standard": {
-            "format": ("[{asctime}] " "{levelname} " "{name} " "{message}"),
+            "format": ("[{asctime}] " "[{request_id}]" "{levelname} " "{name} " "{message}"),
             "style": "{",
+        },
+    },
+
+    "filters": {
+        "request_id": {
+            "()": "common.logging_filters.RequestIDFilter",
         },
     },
 
@@ -230,6 +238,7 @@ LOGGING = {
         "console": {
             "class": "logging.StreamHandler",
             "formatter": "standard",
+            "filters": ["request_id"],
         },
 
         "file": {
@@ -238,6 +247,7 @@ LOGGING = {
             "maxBytes": 1024 * 1024 * 5,
             "backupCount": 5,
             "formatter": "standard",
+            "filters": ["request_id"],
         },
 
         "error_file": {
@@ -247,6 +257,7 @@ LOGGING = {
             "backupCount": 5,
             "formatter": "standard",
             "level": "ERROR",
+            "filters": ["request_id"],
         },
     },
 
@@ -258,6 +269,8 @@ LOGGING = {
         ],
         "level": "INFO",
     },
+
+    
 }
 
 
