@@ -30,7 +30,14 @@ def user():
 
 @pytest.fixture
 def account(user):
-    return Account.objects.get(user=user)
+    return Account.objects.create(
+        user=user,
+        account_number="123456789012",
+        account_type=Account.AccountType.SAVINGS,
+        balance=10000,
+        currency="INR",
+        status=Account.AccountStatus.ACTIVE,
+    )
 
 
 @pytest.fixture
