@@ -37,7 +37,7 @@ class DepositAPIView(APIView):
     permission_classes = [permissions.IsAuthenticated]
 
     def post(self, request):
-        raise Exception("Testing global exception handler")
+        
 
         serializer = DepositSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
